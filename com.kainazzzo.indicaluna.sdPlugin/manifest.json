@@ -8,7 +8,6 @@
   "CategoryIcon": "imgs/category-icon",
   "Icon": "imgs/plugin-icon",
   "CodePath": "plugin.js",
-  "PropertyInspectorPath": "ui/property-inspector.html",
   "SDKVersion": 2,
   "Software": {
     "MinimumVersion": "6.0"

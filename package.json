@@ -6,10 +6,12 @@
   "scripts": {
     "test": "echo \"No tests specified\""
   },
-  "keywords": ["streamdeck", "plugin", "moonraker", "3dprinter"],
+  "keywords": [
+    "streamdeck",
+    "plugin",
+    "moonraker",
+    "3dprinter"
+  ],
   "author": "kainazzzo",
-  "license": "MIT",
-  "dependencies": {
-    "jsonpath-plus": "^7.2.0"
-  }
+  "license": "MIT"
 }
