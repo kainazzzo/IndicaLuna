@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
   "Name": "IndicaLuna",
-  "Version": "1.0.0.0",
+  "Version": "1.1.0.0",
   "Author": "kainazzzo",
   "Description": "Control 3D printers via Moonraker API - send G-code, display stats",
   "Category": "IndicaLuna",
@@ -29,43 +29,17 @@
   "UUID": "com.kainazzzo.indicaluna",
   "Actions": [
     {
-      "Icon": "imgs/preheat-icon",
-      "Name": "Preheat",
-      "States": [
-        {
-          "Image": "imgs/preheat-key"
-        }
-      ],
-      "SupportedInMultiActions": false,
-      "Tooltip": "Send preheat G-code with bed and nozzle temperatures",
-      "UUID": "com.kainazzzo.indicaluna.preheat",
-      "PropertyInspectorPath": "ui/preheat.html"
-    },
-    {
-      "Icon": "imgs/gcode-icon",
-      "Name": "Custom G-code",
-      "States": [
-        {
-          "Image": "imgs/gcode-key"
-        }
-      ],
-      "SupportedInMultiActions": false,
-      "Tooltip": "Send custom G-code commands",
-      "UUID": "com.kainazzzo.indicaluna.gcode",
-      "PropertyInspectorPath": "ui/gcode.html"
-    },
-    {
       "Icon": "imgs/display-icon",
-      "Name": "Display",
+      "Name": "Smart Button",
       "States": [
         {
           "Image": "imgs/display-key"
         }
       ],
       "SupportedInMultiActions": false,
-      "Tooltip": "Display data from HTTP requests with JSONPath and templates",
-      "UUID": "com.kainazzzo.indicaluna.display",
-      "PropertyInspectorPath": "ui/display.html"
+      "Tooltip": "Poll data for display and send G-code on press/hold",
+      "UUID": "com.kainazzzo.indicaluna.button",
+      "PropertyInspectorPath": "ui/button.html"
     }
   ]
 }

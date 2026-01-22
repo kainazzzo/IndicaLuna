@@ -5,13 +5,14 @@
 
 // Action UUIDs
 const ACTIONS = {
-  PREHEAT: 'com.kainazzzo.indicaluna.preheat',
-  GCODE: 'com.kainazzzo.indicaluna.gcode',
-  DISPLAY: 'com.kainazzzo.indicaluna.display'
+  BUTTON: 'com.kainazzzo.indicaluna.button'
 };
 
-// Store for display action polling intervals
-const displayPollers = new Map();
+// Store for button polling intervals
+const buttonPollers = new Map();
+
+// Store for press/hold timers
+const holdTimers = new Map();
 
 // Store for key settings
 const keySettings = new Map();
@@ -55,6 +56,8 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
       // Handle events
       if (event === 'keyDown') {
         handleKeyDown(action, context, jsonObj.payload);
+      } else if (event === 'keyUp') {
+        handleKeyUp(action, context, jsonObj.payload);
       } else if (event === 'willAppear') {
         handleWillAppear(action, context, jsonObj.payload);
       } else if (event === 'willDisappear') {
@@ -88,13 +91,19 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
 function handleKeyDown(action, context, payload) {
   const settings = payload.settings || {};
   
-  if (action === ACTIONS.PREHEAT) {
-    handlePreheat(context, settings);
-  } else if (action === ACTIONS.GCODE) {
-    handleCustomGcode(context, settings);
-  } else if (action === ACTIONS.DISPLAY) {
-    // Display action is passive, triggered by polling
-    console.log('Display action clicked');
+  if (action === ACTIONS.BUTTON) {
+    handleButtonKeyDown(context, settings);
+  }
+}
+
+/**
+ * Handle key up event
+ */
+function handleKeyUp(action, context, payload) {
+  const settings = payload.settings || {};
+  
+  if (action === ACTIONS.BUTTON) {
+    handleButtonKeyUp(context, settings);
   }
 }
 
@@ -107,8 +116,8 @@ function handleWillAppear(action, context, payload) {
   
   console.log('Action appeared:', action, 'settings:', settings);
   
-  if (action === ACTIONS.DISPLAY) {
-    startDisplayPolling(context, settings);
+  if (action === ACTIONS.BUTTON) {
+    startButtonPolling(context, settings);
   }
 }
 
@@ -118,10 +127,11 @@ function handleWillAppear(action, context, payload) {
 function handleWillDisappear(action, context) {
   console.log('Action disappeared:', action);
   
-  if (action === ACTIONS.DISPLAY) {
-    stopDisplayPolling(context);
+  if (action === ACTIONS.BUTTON) {
+    stopButtonPolling(context);
   }
   
+  clearHoldTimer(context);
   keySettings.delete(context);
 }
 
@@ -134,10 +144,10 @@ function handleDidReceiveSettings(action, context, payload) {
   
   console.log('Received settings:', settings);
   
-  if (action === ACTIONS.DISPLAY) {
+  if (action === ACTIONS.BUTTON) {
     // Restart polling with new settings
-    stopDisplayPolling(context);
-    startDisplayPolling(context, settings);
+    stopButtonPolling(context);
+    startButtonPolling(context, settings);
   }
 }
 
@@ -161,38 +171,88 @@ function handleSendToPlugin(action, context, payload) {
 }
 
 /**
- * Handle Preheat action
+ * Handle button key down
  */
-async function handlePreheat(context, settings) {
-  const moonrakerUrl = settings.moonrakerUrl || '';
-  const bedTemp = settings.bedTemp || '60';
-  const nozzleTemp = settings.nozzleTemp || '200';
+function handleButtonKeyDown(context, settings) {
+  clearHoldTimer(context);
   
-  if (!moonrakerUrl) {
-    showAlert(context);
-    console.error('Moonraker URL not configured');
+  const holdDelay = getHoldDelay(settings);
+  const holdGcode = (settings.holdGcode || '').trim();
+  
+  if (!holdGcode) {
+    holdTimers.set(context, { timerId: null, fired: false });
     return;
   }
   
-  // Build G-code commands
-  const gcode = `M140 S${bedTemp}\nM104 S${nozzleTemp}`;
+  const timerId = setTimeout(() => {
+    const timerState = holdTimers.get(context);
+    if (!timerState) {
+      return;
+    }
+    
+    timerState.fired = true;
+    sendConfiguredGcode(context, settings, holdGcode, 'hold');
+  }, holdDelay);
   
-  try {
-    await sendGcode(moonrakerUrl, gcode);
-    showOk(context);
-    console.log('Preheat command sent successfully');
-  } catch (error) {
-    showAlert(context);
-    console.error('Error sending preheat command:', error);
-  }
+  holdTimers.set(context, { timerId, fired: false });
 }
 
 /**
- * Handle Custom G-code action
+ * Handle button key up
  */
-async function handleCustomGcode(context, settings) {
+function handleButtonKeyUp(context, settings) {
+  const timerState = holdTimers.get(context);
+  const pressGcode = (settings.pressGcode || '').trim();
+  
+  if (timerState && timerState.timerId) {
+    clearTimeout(timerState.timerId);
+  }
+  
+  if (!timerState || !timerState.fired) {
+    sendConfiguredGcode(context, settings, pressGcode, 'press');
+  }
+  
+  holdTimers.delete(context);
+}
+
+/**
+ * Clear hold timer for context
+ */
+function clearHoldTimer(context) {
+  const timerState = holdTimers.get(context);
+  
+  if (timerState && timerState.timerId) {
+    clearTimeout(timerState.timerId);
+  }
+  
+  holdTimers.delete(context);
+}
+
+/**
+ * Get hold delay from settings
+ */
+function getHoldDelay(settings) {
+  let holdDelay = parseInt(settings.holdDelay || '750', 10);
+  
+  if (isNaN(holdDelay) || holdDelay < 300) {
+    holdDelay = 750;
+  } else if (holdDelay > 5000) {
+    holdDelay = 5000;
+  }
+  
+  return holdDelay;
+}
+
+/**
+ * Send configured G-code if present
+ */
+async function sendConfiguredGcode(context, settings, gcode, label) {
   const moonrakerUrl = settings.moonrakerUrl || '';
-  const gcode = settings.gcode || '';
+  
+  if (!gcode) {
+    console.log(`No ${label} G-code configured`);
+    return;
+  }
   
   if (!moonrakerUrl) {
     showAlert(context);
@@ -200,19 +260,13 @@ async function handleCustomGcode(context, settings) {
     return;
   }
   
-  if (!gcode) {
-    showAlert(context);
-    console.error('G-code not configured');
-    return;
-  }
-  
   try {
     await sendGcode(moonrakerUrl, gcode);
     showOk(context);
-    console.log('G-code sent successfully');
+    console.log(`${label} G-code sent successfully`);
   } catch (error) {
     showAlert(context);
-    console.error('Error sending G-code:', error);
+    console.error(`Error sending ${label} G-code:`, error);
   }
 }
 
@@ -240,9 +294,9 @@ async function sendGcode(moonrakerUrl, gcode) {
 }
 
 /**
- * Start polling for Display action
+ * Start polling for button action
  */
-function startDisplayPolling(context, settings) {
+function startButtonPolling(context, settings) {
   const url = settings.url || '';
   let interval = parseInt(settings.interval || '5000', 10);
   
@@ -254,39 +308,39 @@ function startDisplayPolling(context, settings) {
   }
   
   if (!url) {
-    console.log('URL not configured for display action');
+    console.log('URL not configured for button action');
     return;
   }
   
   // Initial update
-  updateDisplay(context, settings);
+  updateButtonDisplay(context, settings);
   
   // Start polling
   const pollerId = setInterval(() => {
-    updateDisplay(context, settings);
+    updateButtonDisplay(context, settings);
   }, interval);
   
-  displayPollers.set(context, pollerId);
+  buttonPollers.set(context, pollerId);
   console.log('Started polling for context:', context, 'interval:', interval);
 }
 
 /**
- * Stop polling for Display action
+ * Stop polling for button action
  */
-function stopDisplayPolling(context) {
-  const pollerId = displayPollers.get(context);
+function stopButtonPolling(context) {
+  const pollerId = buttonPollers.get(context);
   
   if (pollerId) {
     clearInterval(pollerId);
-    displayPollers.delete(context);
+    buttonPollers.delete(context);
     console.log('Stopped polling for context:', context);
   }
 }
 
 /**
- * Update Display action
+ * Update button display
  */
-async function updateDisplay(context, settings) {
+async function updateButtonDisplay(context, settings) {
   const url = settings.url || '';
   const jsonPath = settings.jsonPath || '$';
   const template = settings.template || '{value}';
@@ -309,7 +363,7 @@ async function updateDisplay(context, settings) {
     // Update key title
     setTitle(context, title);
     
-    console.log('Display updated:', title);
+    console.log('Button display updated:', title);
   } catch (error) {
     setTitle(context, 'Error');
     console.error('Error updating display:', error);
