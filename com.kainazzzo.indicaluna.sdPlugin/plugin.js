@@ -3,6 +3,21 @@
  * Controls 3D printers via Moonraker API
  */
 
+// Log helpers
+const LOG_PREFIX = '[IndicaLuna]';
+
+function logInfo(...args) {
+  console.log(LOG_PREFIX, ...args);
+}
+
+function logWarn(...args) {
+  console.warn(LOG_PREFIX, ...args);
+}
+
+function logError(...args) {
+  console.error(LOG_PREFIX, ...args);
+}
+
 // Action UUIDs
 const ACTIONS = {
   BUTTON: 'com.kainazzzo.indicaluna.button'
@@ -32,7 +47,7 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
   
   // WebSocket opened
   websocket.onopen = function() {
-    console.log('WebSocket connected');
+    logInfo('WebSocket connected');
     
     // Register plugin
     const json = {
@@ -40,7 +55,7 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
       uuid: inPluginUUID
     };
     
-    websocket.send(JSON.stringify(json));
+    safeSend(json, 'registerPlugin');
   };
   
   // WebSocket message received
@@ -51,7 +66,7 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
       const action = jsonObj.action;
       const context = jsonObj.context;
       
-      console.log('Received event:', event, 'action:', action);
+      logInfo('Received event:', event, 'action:', action);
       
       // Handle events
       if (event === 'keyDown') {
@@ -70,18 +85,18 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
         handleSendToPlugin(action, context, jsonObj.payload);
       }
     } catch (e) {
-      console.error('Error parsing message:', e);
+      logError('Error parsing message:', e);
     }
   };
   
   // WebSocket error
   websocket.onerror = function(evt) {
-    console.error('WebSocket error:', evt);
+    logError('WebSocket error:', evt);
   };
   
   // WebSocket closed
   websocket.onclose = function() {
-    console.log('WebSocket closed');
+    logWarn('WebSocket closed');
   };
 }
 
@@ -91,8 +106,11 @@ function connectElgatoStreamDeckSocket(inPort, inPluginUUID, inRegisterEvent, in
 function handleKeyDown(action, context, payload) {
   const settings = payload.settings || {};
   
+  logInfo('Handle keyDown', { action, context, payload });
   if (action === ACTIONS.BUTTON) {
     handleButtonKeyDown(context, settings);
+  } else {
+    logWarn('Unhandled keyDown action', action);
   }
 }
 
@@ -102,8 +120,11 @@ function handleKeyDown(action, context, payload) {
 function handleKeyUp(action, context, payload) {
   const settings = payload.settings || {};
   
+  logInfo('Handle keyUp', { action, context, payload });
   if (action === ACTIONS.BUTTON) {
     handleButtonKeyUp(context, settings);
+  } else {
+    logWarn('Unhandled keyUp action', action);
   }
 }
 
@@ -114,10 +135,12 @@ function handleWillAppear(action, context, payload) {
   const settings = payload.settings || {};
   keySettings.set(context, settings);
   
-  console.log('Action appeared:', action, 'settings:', settings);
+  logInfo('Action appeared', { action, context, settings, payload });
   
   if (action === ACTIONS.BUTTON) {
     startButtonPolling(context, settings);
+  } else {
+    logWarn('Unhandled willAppear action', action);
   }
 }
 
@@ -125,10 +148,12 @@ function handleWillAppear(action, context, payload) {
  * Handle will disappear event
  */
 function handleWillDisappear(action, context) {
-  console.log('Action disappeared:', action);
+  logInfo('Action disappeared', { action, context });
   
   if (action === ACTIONS.BUTTON) {
     stopButtonPolling(context);
+  } else {
+    logWarn('Unhandled willDisappear action', action);
   }
   
   clearHoldTimer(context);
@@ -142,12 +167,14 @@ function handleDidReceiveSettings(action, context, payload) {
   const settings = payload.settings || {};
   keySettings.set(context, settings);
   
-  console.log('Received settings:', settings);
+  logInfo('Received settings', { action, context, settings, payload });
   
   if (action === ACTIONS.BUTTON) {
     // Restart polling with new settings
     stopButtonPolling(context);
     startButtonPolling(context, settings);
+  } else {
+    logWarn('Unhandled didReceiveSettings action', action);
   }
 }
 
@@ -155,14 +182,14 @@ function handleDidReceiveSettings(action, context, payload) {
  * Handle property inspector appeared event
  */
 function handlePropertyInspectorDidAppear(action, context) {
-  console.log('Property inspector appeared for action:', action);
+  logInfo('Property inspector appeared', { action, context });
 }
 
 /**
  * Handle message from property inspector
  */
 function handleSendToPlugin(action, context, payload) {
-  console.log('Received from PI:', payload);
+  logInfo('Received from PI', { action, context, payload });
   
   // Update settings if needed
   if (payload.settings) {
@@ -174,12 +201,14 @@ function handleSendToPlugin(action, context, payload) {
  * Handle button key down
  */
 function handleButtonKeyDown(context, settings) {
+  logInfo('Button key down', { context, settings });
   clearHoldTimer(context);
   
   const holdDelay = getHoldDelay(settings);
   const holdGcode = (settings.holdGcode || '').trim();
   
   if (!holdGcode) {
+    logInfo('No hold G-code configured', { context });
     holdTimers.set(context, { timerId: null, fired: false });
     return;
   }
@@ -187,14 +216,17 @@ function handleButtonKeyDown(context, settings) {
   const timerId = setTimeout(() => {
     const timerState = holdTimers.get(context);
     if (!timerState) {
+      logWarn('Hold timer fired but state missing', { context });
       return;
     }
     
     timerState.fired = true;
     sendConfiguredGcode(context, settings, holdGcode, 'hold');
+    logInfo('Hold G-code dispatched', { context, holdDelay });
   }, holdDelay);
   
   holdTimers.set(context, { timerId, fired: false });
+  logInfo('Hold timer started', { context, holdDelay });
 }
 
 /**
@@ -204,15 +236,19 @@ function handleButtonKeyUp(context, settings) {
   const timerState = holdTimers.get(context);
   const pressGcode = (settings.pressGcode || '').trim();
   
+  logInfo('Button key up', { context, settings, timerState });
   if (timerState && timerState.timerId) {
     clearTimeout(timerState.timerId);
+    logInfo('Cleared hold timer', { context });
   }
   
   if (!timerState || !timerState.fired) {
     sendConfiguredGcode(context, settings, pressGcode, 'press');
+    logInfo('Press G-code dispatched', { context });
   }
   
   holdTimers.delete(context);
+  logInfo('Hold timer state cleared', { context });
 }
 
 /**
@@ -223,6 +259,7 @@ function clearHoldTimer(context) {
   
   if (timerState && timerState.timerId) {
     clearTimeout(timerState.timerId);
+    logInfo('Cleared hold timer from clearHoldTimer', { context });
   }
   
   holdTimers.delete(context);
@@ -244,6 +281,7 @@ function getHoldDelay(settings) {
     // Clamp to maximum allowed by the HTML max attribute
     holdDelay = 5000;
   }
+  logInfo('Computed hold delay', { holdDelay, settings });
   return holdDelay;
 }
 
@@ -254,23 +292,24 @@ async function sendConfiguredGcode(context, settings, gcode, label) {
   const moonrakerUrl = settings.moonrakerUrl || '';
   
   if (!gcode) {
-    console.log(`No ${label} G-code configured`);
+    logInfo(`No ${label} G-code configured`, { context, settings });
     return;
   }
   
   if (!moonrakerUrl) {
     showAlert(context);
-    console.error('Moonraker URL not configured');
+    logError('Moonraker URL not configured', { context, settings });
     return;
   }
   
   try {
+    logInfo(`Preparing to send ${label} G-code`, { moonrakerUrl, gcode });
     await sendGcode(moonrakerUrl, gcode);
     showOk(context);
-    console.log(`${label} G-code sent successfully`);
+    logInfo(`${label} G-code sent successfully`);
   } catch (error) {
     showAlert(context);
-    console.error(`Error sending ${label} G-code:`, error);
+    logError(`Error sending ${label} G-code:`, error, { context, settings });
   }
 }
 
@@ -279,22 +318,33 @@ async function sendConfiguredGcode(context, settings, gcode, label) {
  */
 async function sendGcode(moonrakerUrl, gcode) {
   const url = `${moonrakerUrl}/printer/gcode/script`;
+  const payload = {
+    script: gcode
+  };
   
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      script: gcode
-    })
-  });
+  logInfo('Sending request to Moonraker', url);
+  logInfo('Moonraker payload', JSON.stringify(payload));
   
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    logInfo('Moonraker response status', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    logError('Moonraker request failed', error);
+    throw error;
   }
-  
-  return await response.json();
 }
 
 /**
@@ -304,6 +354,7 @@ function startButtonPolling(context, settings) {
   const url = settings.url || '';
   let interval = parseInt(settings.interval || '5000', 10);
   
+  logInfo('Start button polling requested', { context, settings });
   // Validate interval (minimum 1000ms, maximum 60000ms)
   if (isNaN(interval) || interval < 1000) {
     interval = 5000;
@@ -312,12 +363,13 @@ function startButtonPolling(context, settings) {
   }
   
   if (!url) {
-    console.log('URL not configured for button action');
+    logInfo('URL not configured for button action', { context, settings });
     return;
   }
   
   // Initial update
   updateButtonDisplay(context, settings);
+  logInfo('Initial button display update queued', { context });
   
   // Start polling
   const pollerId = setInterval(() => {
@@ -325,7 +377,7 @@ function startButtonPolling(context, settings) {
   }, interval);
   
   buttonPollers.set(context, pollerId);
-  console.log('Started polling for context:', context, 'interval:', interval);
+  logInfo('Started polling for context:', context, 'interval:', interval);
 }
 
 /**
@@ -337,7 +389,9 @@ function stopButtonPolling(context) {
   if (pollerId) {
     clearInterval(pollerId);
     buttonPollers.delete(context);
-    console.log('Stopped polling for context:', context);
+    logInfo('Stopped polling for context:', context);
+  } else {
+    logWarn('Stop polling requested but no poller found', { context });
   }
 }
 
@@ -350,27 +404,32 @@ async function updateButtonDisplay(context, settings) {
   const template = settings.template || '{value}';
   
   try {
+    logInfo('Updating button display', { url, jsonPath, template });
     const response = await fetch(url);
     
+    logInfo('Display response status', response.status);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
     const data = await response.json();
+    logInfo('Display response payload received', { context, url });
     
     // Extract value using JSONPath
     const value = extractJsonPath(data, jsonPath);
+    logInfo('Extracted JSONPath value', { jsonPath, value });
     
     // Apply template
     const title = applyTemplate(template, value);
+    logInfo('Applied template for title', { template, title });
     
     // Update key title
     setTitle(context, title);
     
-    console.log('Button display updated:', title);
+    logInfo('Button display updated:', title);
   } catch (error) {
     setTitle(context, 'Error');
-    console.error('Error updating display:', error);
+    logError('Error updating display:', error);
   }
 }
 
@@ -378,6 +437,7 @@ async function updateButtonDisplay(context, settings) {
  * Extract value using JSONPath (simplified implementation)
  */
 function extractJsonPath(data, path) {
+  logInfo('Extracting JSONPath', { path });
   if (path === '$') {
     return data;
   }
@@ -424,6 +484,7 @@ function extractJsonPath(data, path) {
   let result = data;
   for (const part of parts) {
     if (result === null || result === undefined) {
+      logWarn('JSONPath traversal hit null/undefined', { part, path });
       return null;
     }
     
@@ -442,6 +503,7 @@ function extractJsonPath(data, path) {
  * Apply template to value
  */
 function applyTemplate(template, value) {
+  logInfo('Applying template', { template, value });
   if (typeof value === 'object') {
     // If value is object, try to stringify it
     value = JSON.stringify(value);
@@ -455,6 +517,7 @@ function applyTemplate(template, value) {
  * Set title on key
  */
 function setTitle(context, title) {
+  logInfo('Setting title', { context, title });
   const json = {
     event: 'setTitle',
     context: context,
@@ -464,29 +527,54 @@ function setTitle(context, title) {
     }
   };
   
-  websocket.send(JSON.stringify(json));
+  safeSend(json, 'setTitle');
 }
 
 /**
  * Show OK feedback on key
  */
 function showOk(context) {
+  logInfo('Showing OK', { context });
   const json = {
     event: 'showOk',
     context: context
   };
   
-  websocket.send(JSON.stringify(json));
+  safeSend(json, 'showOk');
 }
 
 /**
  * Show alert feedback on key
  */
 function showAlert(context) {
+  logInfo('Showing alert', { context });
   const json = {
     event: 'showAlert',
     context: context
   };
   
-  websocket.send(JSON.stringify(json));
+  safeSend(json, 'showAlert');
+}
+
+/**
+ * Safely send message to Stream Deck
+ */
+function safeSend(payload, label) {
+  logInfo('Preparing Stream Deck send', { label });
+  if (!websocket) {
+    logError('WebSocket not initialized for send', label);
+    return;
+  }
+  if (websocket.readyState !== WebSocket.OPEN) {
+    logWarn('WebSocket not open for send', label, 'state:', websocket.readyState);
+    return;
+  }
+  
+  try {
+    const message = JSON.stringify(payload);
+    logInfo('Sending Stream Deck message', label, message);
+    websocket.send(message);
+  } catch (error) {
+    logError('Failed to send Stream Deck message', label, error);
+  }
 }
