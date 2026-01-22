@@ -232,14 +232,18 @@ function clearHoldTimer(context) {
  * Get hold delay from settings
  */
 function getHoldDelay(settings) {
-  let holdDelay = parseInt(settings.holdDelay || '750', 10);
-  
-  if (isNaN(holdDelay) || holdDelay < 300) {
+  let holdDelay = parseInt(settings.holdDelay, 10);
+
+  if (isNaN(holdDelay)) {
+    // Default hold delay when not configured or invalid
     holdDelay = 750;
+  } else if (holdDelay < 300) {
+    // Clamp to minimum allowed by the HTML min attribute
+    holdDelay = 300;
   } else if (holdDelay > 5000) {
+    // Clamp to maximum allowed by the HTML max attribute
     holdDelay = 5000;
   }
-  
   return holdDelay;
 }
 
