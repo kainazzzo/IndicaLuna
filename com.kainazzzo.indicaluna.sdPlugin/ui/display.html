@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Display Settings</title>
+  <link rel="stylesheet" href="sdpi.css">
+</head>
+<body>
+  <div class="sdpi-wrapper">
+    <div class="sdpi-heading">HTTP Request Settings</div>
+    
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">URL</div>
+      <div class="sdpi-item-value">
+        <input type="text" id="url" data-setting="url" placeholder="http://192.168.1.100:7125/printer/objects/query?heater_bed">
+        <div class="sdpi-info">URL to fetch JSON data from</div>
+      </div>
+    </div>
+    
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Polling Interval (ms)</div>
+      <div class="sdpi-item-value">
+        <input type="number" id="interval" data-setting="interval" placeholder="5000" min="1000" max="60000" step="1000">
+        <div class="sdpi-info">How often to refresh the data (in milliseconds, minimum 1000)</div>
+      </div>
+    </div>
+    
+    <div class="sdpi-heading">Data Extraction Settings</div>
+    
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">JSONPath Expression</div>
+      <div class="sdpi-item-value">
+        <input type="text" id="jsonPath" data-setting="jsonPath" placeholder="$.result.status.heater_bed.temperature">
+        <div class="sdpi-info">Path to extract data from JSON response (e.g., $.result.status.heater_bed.temperature)</div>
+      </div>
+    </div>
+    
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Display Template</div>
+      <div class="sdpi-item-value">
+        <input type="text" id="template" data-setting="template" placeholder="Bed: {value}°C">
+        <div class="sdpi-info">Template for displaying the value. Use {value} as placeholder.</div>
+      </div>
+    </div>
+    
+    <div class="sdpi-info" style="margin-top: 15px;">
+      <strong>JSONPath Examples:</strong><br>
+      • $ - Root object<br>
+      • $.result.status - Nested property<br>
+      • $.data[0] - Array element<br>
+      • $.result.status.heater_bed.temperature - Deep nested property
+    </div>
+  </div>
+  
+  <script src="sdpi.js"></script>
+  <script>
+    function loadSettings() {
+      document.getElementById('url').value = settings.url || '';
+      document.getElementById('interval').value = settings.interval || '5000';
+      document.getElementById('jsonPath').value = settings.jsonPath || '$';
+      document.getElementById('template').value = settings.template || '{value}';
+    }
+  </script>
+</body>
+</html>
