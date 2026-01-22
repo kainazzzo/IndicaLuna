@@ -4,28 +4,17 @@ IndicaLuna = ([it] points to the moon). A Stream Deck plugin that works with Moo
 
 ## Features
 
-This plugin provides three actions for controlling and monitoring your 3D printer via Moonraker:
+This plugin provides a single Smart Button action for controlling and monitoring your 3D printer via Moonraker:
 
-### 1. Preheat Action
-Send preheat G-code commands to set bed and nozzle temperatures.
-- Configure bed temperature (°C)
-- Configure nozzle/extruder temperature (°C)
-- Sends `M140 S{bed}` and `M104 S{nozzle}` G-code commands
-- Visual feedback on success/failure
-
-### 2. Custom G-code Action
-Send arbitrary G-code commands to your printer.
-- Enter any G-code commands (one per line)
-- Useful for custom sequences like homing, leveling, or cleanup
-- Visual feedback on success/failure
-
-### 3. Display Action
-Periodically fetch data via HTTP and display it on the Stream Deck key.
-- Configure any HTTP endpoint (typically Moonraker API)
+### Smart Button Action
+One button that can poll HTTP data for display and send G-code on press or hold.
+- Configure an HTTP endpoint (typically Moonraker API)
 - Use JSONPath to extract specific values from JSON responses
 - Apply custom templates to format the display
 - Configurable polling interval (minimum 1 second)
-- Automatically updates in the background
+- Send custom G-code on press (e.g., heat-up like `M190`/`M109`)
+- Send custom G-code on hold (e.g., cooldown or cleanup)
+- Visual feedback on success/failure
 
 ## Installation
 
@@ -43,32 +32,22 @@ http://YOUR_PRINTER_IP:7125
 
 For example: `http://192.168.1.100:7125`
 
-### Preheat Configuration
-1. Add the Preheat action to a key
+### Smart Button Configuration
+1. Add the Smart Button action to a key
 2. In the Property Inspector:
    - Enter your Moonraker URL
-   - Set desired bed temperature (e.g., 60°C)
-   - Set desired nozzle temperature (e.g., 200°C)
-
-### Custom G-code Configuration
-1. Add the Custom G-code action to a key
-2. In the Property Inspector:
-   - Enter your Moonraker URL
-   - Enter G-code commands (one per line or use \n)
-   
-Example G-code:
-```
-G28
-G1 Z10
-```
-
-### Display Configuration
-1. Add the Display action to a key
-2. In the Property Inspector:
+   - Enter press G-code commands (one per line or use \n)
+   - Optionally enter hold G-code commands and hold duration
    - Enter the URL to fetch (e.g., `http://192.168.1.100:7125/printer/objects/query?heater_bed`)
    - Set polling interval in milliseconds (e.g., 5000 for 5 seconds)
    - Enter JSONPath to extract value (e.g., `$.result.status.heater_bed.temperature`)
    - Enter display template (e.g., `Bed: {value}°C`)
+
+Example press G-code:
+```
+M190 S60
+M109 S200
+```
 
 #### JSONPath Examples
 - `$` - Root object
@@ -96,9 +75,7 @@ com.kainazzzo.indicaluna.sdPlugin/
 └── ui/                    # Property Inspectors
     ├── sdpi.css           # Shared styles
     ├── sdpi.js            # Shared JavaScript
-    ├── preheat.html       # Preheat PI
-    ├── gcode.html         # Custom G-code PI
-    └── display.html       # Display PI
+    └── button.html        # Smart Button PI
 ```
 
 ### Dependencies
@@ -122,7 +99,7 @@ The plugin includes basic error handling:
 - Shows alert (red X) on Stream Deck key when requests fail
 - Shows OK (green checkmark) on successful G-code execution
 - Logs errors to console for debugging
-- Display action shows "Error" when data fetch fails
+- Smart Button display shows "Error" when data fetch fails
 
 ## Troubleshooting
 

@@ -2,13 +2,51 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Display Settings</title>
+  <title>Smart Button Settings</title>
   <link rel="stylesheet" href="sdpi.css">
 </head>
 <body>
   <div class="sdpi-wrapper">
-    <div class="sdpi-heading">HTTP Request Settings</div>
-    
+    <div class="sdpi-heading">Moonraker Settings</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Moonraker URL</div>
+      <div class="sdpi-item-value">
+        <input type="text" id="moonrakerUrl" data-setting="moonrakerUrl" placeholder="http://192.168.1.100:7125">
+        <div class="sdpi-info">Full URL to your Moonraker instance (e.g., http://192.168.1.100:7125)</div>
+      </div>
+    </div>
+
+    <div class="sdpi-heading">Press Action</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Press G-code</div>
+      <div class="sdpi-item-value">
+        <textarea id="pressGcode" data-setting="pressGcode" placeholder="M190 S60&#10;M109 S200"></textarea>
+        <div class="sdpi-info">G-code to send on a quick press (one per line)</div>
+      </div>
+    </div>
+
+    <div class="sdpi-heading">Hold Action</div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Hold G-code</div>
+      <div class="sdpi-item-value">
+        <textarea id="holdGcode" data-setting="holdGcode" placeholder="M104 S0&#10;M140 S0"></textarea>
+        <div class="sdpi-info">G-code to send after holding the key for the duration below</div>
+      </div>
+    </div>
+
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Hold Duration (ms)</div>
+      <div class="sdpi-item-value">
+        <input type="number" id="holdDelay" data-setting="holdDelay" placeholder="750" min="300" max="5000" step="50">
+        <div class="sdpi-info">Time in milliseconds to trigger the hold action (300-5000ms)</div>
+      </div>
+    </div>
+
+    <div class="sdpi-heading">HTTP Display</div>
+
     <div class="sdpi-item">
       <div class="sdpi-item-label">URL</div>
       <div class="sdpi-item-value">
@@ -16,17 +54,15 @@
         <div class="sdpi-info">URL to fetch JSON data from</div>
       </div>
     </div>
-    
+
     <div class="sdpi-item">
       <div class="sdpi-item-label">Polling Interval (ms)</div>
       <div class="sdpi-item-value">
         <input type="number" id="interval" data-setting="interval" placeholder="5000" min="1000" max="60000" step="1000">
-        <div class="sdpi-info">How often to refresh the data (in milliseconds, minimum 1000)</div>
+        <div class="sdpi-info">How often to refresh the data (minimum 1000ms)</div>
       </div>
     </div>
-    
-    <div class="sdpi-heading">Data Extraction Settings</div>
-    
+
     <div class="sdpi-item">
       <div class="sdpi-item-label">JSONPath Expression</div>
       <div class="sdpi-item-value">
@@ -34,7 +70,7 @@
         <div class="sdpi-info">Path to extract data from JSON response (e.g., $.result.status.heater_bed.temperature)</div>
       </div>
     </div>
-    
+
     <div class="sdpi-item">
       <div class="sdpi-item-label">Display Template</div>
       <div class="sdpi-item-value">
@@ -42,7 +78,7 @@
         <div class="sdpi-info">Template for displaying the value. Use {value} as placeholder.</div>
       </div>
     </div>
-    
+
     <div class="sdpi-info" style="margin-top: 15px;">
       <strong>JSONPath Examples:</strong><br>
       • $ - Root object<br>
@@ -51,10 +87,14 @@
       • $.result.status.heater_bed.temperature - Deep nested property
     </div>
   </div>
-  
+
   <script src="sdpi.js"></script>
   <script>
     function loadSettings() {
+      document.getElementById('moonrakerUrl').value = settings.moonrakerUrl || '';
+      document.getElementById('pressGcode').value = settings.pressGcode || '';
+      document.getElementById('holdGcode').value = settings.holdGcode || '';
+      document.getElementById('holdDelay').value = settings.holdDelay || '750';
       document.getElementById('url').value = settings.url || '';
       document.getElementById('interval').value = settings.interval || '5000';
       document.getElementById('jsonPath').value = settings.jsonPath || '$';

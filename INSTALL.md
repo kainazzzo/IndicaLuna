@@ -54,41 +54,21 @@ If successful, you'll receive JSON data about your printer.
 
 ## Configuring Actions
 
-### Preheat Action Setup
+### Smart Button Setup
 
-1. Drag "Preheat" action from plugin list to a Stream Deck key
+1. Drag the "Smart Button" action from the plugin list to a Stream Deck key
 2. Click the key to open Property Inspector
 3. Configure:
    - **Moonraker URL**: Your printer's Moonraker URL
-   - **Bed Temperature**: Target bed temp in Celsius (e.g., 60)
-   - **Nozzle Temperature**: Target nozzle temp in Celsius (e.g., 200)
-4. Press the key to send preheat command
-5. Green checkmark = success, Red X = error
-
-### Custom G-code Action Setup
-
-1. Drag "Custom G-code" action to a Stream Deck key
-2. Click the key to open Property Inspector
-3. Configure:
-   - **Moonraker URL**: Your printer's Moonraker URL
-   - **G-code Commands**: Enter commands (one per line)
-4. Example commands:
-   ```
-   G28
-   G1 Z10
-   ```
-5. Press the key to execute the G-code
-6. Green checkmark = success, Red X = error
-
-### Display Action Setup
-
-1. Drag "Display" action to a Stream Deck key
-2. Click the key to open Property Inspector
-3. Configure:
-   - **URL**: Moonraker API endpoint
+   - **Press G-code**: Commands to send on a quick press (one per line)
+   - **Hold G-code**: Commands to send on a long press (optional)
+   - **Hold Duration**: Time in milliseconds to trigger the hold action
+   - **URL**: Moonraker API endpoint for display (optional)
    - **Polling Interval**: Update frequency (5000 = 5 seconds)
    - **JSONPath Expression**: Path to extract data
    - **Display Template**: How to format the display
+4. Press the key to execute press G-code, or hold to execute hold G-code
+5. Green checkmark = success, Red X = error
 
 #### Example Configurations
 
@@ -176,7 +156,7 @@ You can configure multiple actions with different Moonraker URLs to control mult
 
 ### Macros
 
-Use the Custom G-code action to create complex macros:
+Use the Smart Button press or hold G-code to create complex macros:
 ```
 G28                    ; Home all
 G1 Z10 F5000          ; Lift nozzle
@@ -187,7 +167,7 @@ M106 S0               ; Turn off fan
 
 ### Custom Displays
 
-Combine multiple data points by making separate Display actions or use Moonraker's multi-object query feature.
+Combine multiple data points by making separate Smart Buttons or use Moonraker's multi-object query feature.
 
 ## Security Considerations
 

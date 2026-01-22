@@ -9,22 +9,16 @@ IndicaLuna is a Stream Deck plugin that communicates with 3D printers through th
 ```
 com.kainazzzo.indicaluna.sdPlugin/
 ├── manifest.json                 # Plugin configuration and action definitions
-├── plugin.js                     # Main plugin logic (434 lines)
+├── plugin.js                     # Main plugin logic (488 lines)
 ├── imgs/                         # Icons and images for actions
 │   ├── plugin-icon.png           # Plugin icon
 │   ├── category-icon.png         # Category icon
-│   ├── preheat-icon.png          # Preheat action icon
-│   ├── preheat-key.png           # Preheat key image
-│   ├── gcode-icon.png            # G-code action icon
-│   ├── gcode-key.png             # G-code key image
-│   ├── display-icon.png          # Display action icon
-│   └── display-key.png           # Display key image
+│   ├── display-icon.png          # Smart button icon
+│   └── display-key.png           # Smart button key image
 └── ui/                           # Property Inspectors
     ├── sdpi.css                  # Shared styles
     ├── sdpi.js                   # Shared PI logic (141 lines)
-    ├── preheat.html              # Preheat action settings
-    ├── gcode.html                # G-code action settings
-    └── display.html              # Display action settings
+    └── button.html               # Smart button settings
 ```
 
 ## Components
@@ -53,14 +47,13 @@ Establishes WebSocket connection with Stream Deck software.
 - `handleDidReceiveSettings()` - Updates settings
 
 **Action Implementations**
-- `handlePreheat()` - Sends M140/M104 commands for temperature control
-- `handleCustomGcode()` - Sends arbitrary G-code
-- `startDisplayPolling()` - Begins periodic HTTP polling
-- `updateDisplay()` - Fetches and displays data
+- `handleButtonKeyDown()` / `handleButtonKeyUp()` - Handle press and hold G-code
+- `startButtonPolling()` - Begins periodic HTTP polling
+- `updateButtonDisplay()` - Fetches and displays data
 
-### 2. Property Inspectors (UI)
+### 2. Property Inspector (UI)
 
-Each action has its own HTML-based Property Inspector for configuration:
+The Smart Button uses a single HTML-based Property Inspector for configuration:
 
 **Common Elements (sdpi.js)**
 - WebSocket connection to Stream Deck
@@ -68,16 +61,11 @@ Each action has its own HTML-based Property Inspector for configuration:
 - Auto-save on input change
 - Two-way data binding
 
-**Preheat PI**
+**Smart Button PI**
 - Moonraker URL input
-- Bed temperature (numeric)
-- Nozzle temperature (numeric)
-
-**Custom G-code PI**
-- Moonraker URL input
-- G-code textarea (multiline)
-
-**Display PI**
+- Press G-code textarea (multiline)
+- Hold G-code textarea (multiline)
+- Hold duration input
 - URL input
 - Polling interval (numeric, validated 1000-60000ms)
 - JSONPath expression
@@ -136,30 +124,21 @@ Stream Deck Software
 
 ## Data Flow
 
-### Preheat Action
+### Smart Button Press/Hold Action
 
 1. User presses Stream Deck key
 2. `keyDown` event received
-3. `handlePreheat()` called
-4. Settings retrieved (bed temp, nozzle temp, URL)
-5. G-code constructed: `M140 S{bed}\nM104 S{nozzle}`
+3. Hold timer starts
+4. If held long enough, hold G-code is sent
+5. If released before hold duration, press G-code is sent
 6. HTTP POST to Moonraker `/printer/gcode/script`
-7. Visual feedback sent to Stream Deck (showOk/showAlert)
+7. Visual feedback sent to Stream Deck
 
-### Custom G-code Action
-
-1. User presses Stream Deck key
-2. `keyDown` event received
-3. `handleCustomGcode()` called
-4. Settings retrieved (gcode, URL)
-5. HTTP POST to Moonraker `/printer/gcode/script`
-6. Visual feedback sent to Stream Deck
-
-### Display Action
+### Smart Button Display
 
 1. Key appears on Stream Deck
 2. `willAppear` event received
-3. `startDisplayPolling()` called
+3. `startButtonPolling()` called
 4. Interval timer started
 5. Every interval:
    a. HTTP GET to configured URL
@@ -225,12 +204,12 @@ Settings include:
 ### Polling Management
 
 ```javascript
-const displayPollers = new Map();
-// Key: context (unique per Display action key)
+const buttonPollers = new Map();
+// Key: context (unique per Smart Button key)
 // Value: interval timer ID
 ```
 
-Each Display action maintains its own polling timer.
+Each Smart Button maintains its own polling timer.
 
 ## Error Handling
 
@@ -241,8 +220,8 @@ Each Display action maintains its own polling timer.
 - Display shows "Error" text
 
 ### Invalid Configuration
-- Empty/missing URL → showAlert
-- Empty G-code → showAlert
+- Empty/missing URL → showAlert when G-code is sent
+- Empty G-code → no action
 - Invalid polling interval → defaults to 5000ms
 
 ### JSON Parsing Errors
@@ -290,19 +269,14 @@ Each Display action maintains its own polling timer.
 
 ### Manual Testing Checklist
 
-1. **Preheat Action**
-   - [ ] Key press sends correct G-code
+1. **Smart Button Press/Hold**
+   - [ ] Short press sends press G-code
+   - [ ] Hold sends hold G-code
    - [ ] Success feedback displayed
    - [ ] Error feedback on network failure
    - [ ] Settings persist across restarts
 
-2. **Custom G-code Action**
-   - [ ] Single command execution
-   - [ ] Multi-line commands
-   - [ ] Success/error feedback
-   - [ ] Settings persistence
-
-3. **Display Action**
+2. **Smart Button Display**
    - [ ] Initial data fetch on key appear
    - [ ] Periodic updates at correct interval
    - [ ] JSONPath extraction accuracy
@@ -310,7 +284,7 @@ Each Display action maintains its own polling timer.
    - [ ] Cleanup on key removal
    - [ ] Multiple display keys simultaneously
 
-4. **Property Inspectors**
+3. **Property Inspector**
    - [ ] Settings load correctly
    - [ ] Auto-save on change
    - [ ] Input validation
@@ -378,9 +352,9 @@ Plugin-specific logs:
 - Inline documentation
 
 ### Metrics
-- Total plugin code: ~434 lines
+- Total plugin code: ~488 lines
 - Property Inspector code: ~141 lines
-- HTML templates: ~163 lines
+- HTML templates: ~105 lines
 - Zero external dependencies
 - Zero security vulnerabilities (CodeQL verified)
 
