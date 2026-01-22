@@ -560,7 +560,6 @@ function showAlert(context) {
  * Safely send message to Stream Deck
  */
 function safeSend(payload, label) {
-  logInfo('Preparing Stream Deck send', { label });
   if (!websocket) {
     logError('WebSocket not initialized for send', label);
     return;
