@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Custom G-code Settings</title>
+  <link rel="stylesheet" href="sdpi.css">
+</head>
+<body>
+  <div class="sdpi-wrapper">
+    <div class="sdpi-heading">Moonraker Settings</div>
+    
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">Moonraker URL</div>
+      <div class="sdpi-item-value">
+        <input type="text" id="moonrakerUrl" data-setting="moonrakerUrl" placeholder="http://192.168.1.100:7125">
+        <div class="sdpi-info">Full URL to your Moonraker instance (e.g., http://192.168.1.100:7125)</div>
+      </div>
+    </div>
+    
+    <div class="sdpi-heading">G-code Settings</div>
+    
+    <div class="sdpi-item">
+      <div class="sdpi-item-label">G-code Commands</div>
+      <div class="sdpi-item-value">
+        <textarea id="gcode" data-setting="gcode" placeholder="G28&#10;G1 Z10"></textarea>
+        <div class="sdpi-info">Enter G-code commands to send (one per line or separated by \n)</div>
+      </div>
+    </div>
+    
+    <div class="sdpi-info" style="margin-top: 15px;">
+      <strong>Examples:</strong><br>
+      • G28 - Home all axes<br>
+      • G1 Z10 - Move Z axis to 10mm<br>
+      • M104 S0 - Turn off hotend
+    </div>
+  </div>
+  
+  <script src="sdpi.js"></script>
+  <script>
+    function loadSettings() {
+      document.getElementById('moonrakerUrl').value = settings.moonrakerUrl || '';
+      document.getElementById('gcode').value = settings.gcode || '';
+    }
+  </script>
+</body>
+</html>
