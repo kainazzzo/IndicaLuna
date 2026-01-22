@@ -244,7 +244,14 @@ async function sendGcode(moonrakerUrl, gcode) {
  */
 function startDisplayPolling(context, settings) {
   const url = settings.url || '';
-  const interval = parseInt(settings.interval || '5000', 10);
+  let interval = parseInt(settings.interval || '5000', 10);
+  
+  // Validate interval (minimum 1000ms, maximum 60000ms)
+  if (isNaN(interval) || interval < 1000) {
+    interval = 5000;
+  } else if (interval > 60000) {
+    interval = 60000;
+  }
   
   if (!url) {
     console.log('URL not configured for display action');
@@ -318,27 +325,59 @@ function extractJsonPath(data, path) {
   }
   
   // Simple JSONPath implementation
-  // Remove leading '$.' if present
-  const cleanPath = path.replace(/^\$\./, '');
+  // Remove leading '$.' or '$' if present
+  let cleanPath = path.replace(/^\$\.?/, '');
   
-  // Split by dots and brackets
-  const parts = cleanPath.split(/\.|\[|\]/).filter(p => p);
+  // Parse path into parts handling both dot notation and bracket notation
+  const parts = [];
+  let current = '';
+  let inBracket = false;
   
-  let current = data;
-  for (const part of parts) {
-    if (current === null || current === undefined) {
-      return null;
-    }
+  for (let i = 0; i < cleanPath.length; i++) {
+    const char = cleanPath[i];
     
-    // Handle array indices
-    if (/^\d+$/.test(part)) {
-      current = current[parseInt(part, 10)];
+    if (char === '[') {
+      if (current) {
+        parts.push(current);
+        current = '';
+      }
+      inBracket = true;
+    } else if (char === ']') {
+      if (current) {
+        parts.push(current);
+        current = '';
+      }
+      inBracket = false;
+    } else if (char === '.' && !inBracket) {
+      if (current) {
+        parts.push(current);
+        current = '';
+      }
     } else {
-      current = current[part];
+      current += char;
     }
   }
   
-  return current;
+  if (current) {
+    parts.push(current);
+  }
+  
+  // Navigate through the data structure
+  let result = data;
+  for (const part of parts) {
+    if (result === null || result === undefined) {
+      return null;
+    }
+    
+    // Handle array indices and object properties
+    if (/^\d+$/.test(part)) {
+      result = result[parseInt(part, 10)];
+    } else {
+      result = result[part];
+    }
+  }
+  
+  return result;
 }
 
 /**
