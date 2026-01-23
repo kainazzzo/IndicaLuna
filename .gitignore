@@ -1,26 +1,6 @@
-# Node modules
+# Node.js
 node_modules/
-package-lock.json
 
-# Logs
-logs/
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Build artifacts
-dist/
-build/
-
-# IDE
-.vscode/
-.idea/
-
-# Temporary files
-tmp/
-*.tmp
-
-# Stream Deck debug
-com.kainazzzo.indicaluna.sdPlugin/logs/
+# Stream Deck files
+*.sdPlugin/bin
+*.sdPlugin/logs
