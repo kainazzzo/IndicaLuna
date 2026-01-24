@@ -10,11 +10,32 @@
 			"request": "attach",
 			"processId": "${command:PickProcess}",
 			"outFiles": [
-				"${workspaceFolder}/bin/**/*.js"
+				"${workspaceFolder}/com.datti.indicaluna.sdPlugin/bin/**/*.js"
 			],
 			"resolveSourceMapLocations": [
 				"${workspaceFolder}/**"
 			]
+		},
+		{
+			"name": "Attach to IndicaLuna (port prompt)",
+			"type": "node",
+			"request": "attach",
+			"address": "127.0.0.1",
+			"port": "${input:indicaLunaPort}",
+			"outFiles": [
+				"${workspaceFolder}/com.datti.indicaluna.sdPlugin/bin/**/*.js"
+			],
+			"resolveSourceMapLocations": [
+				"${workspaceFolder}/**"
+			]
+		}
+	],
+	"inputs": [
+		{
+			"id": "indicaLunaPort",
+			"type": "promptString",
+			"description": "Enter the Node inspector port for IndicaLuna",
+			"default": "9229"
 		}
 	]
 }

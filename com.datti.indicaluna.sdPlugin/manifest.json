@@ -18,6 +18,22 @@
 					"TitleAlignment": "middle"
 				}
 			]
+		},
+		{
+			"Name": "Smart Button",
+			"UUID": "com.datti.indicaluna.smart-button",
+			"Icon": "imgs/actions/counter/icon",
+			"Tooltip": "Sends custom G-code to Moonraker on press.",
+			"PropertyInspectorPath": "ui/smart-button.html",
+			"Controllers": [
+				"Keypad"
+			],
+			"States": [
+				{
+					"Image": "imgs/actions/counter/key",
+					"TitleAlignment": "middle"
+				}
+			]
 		}
 	],
 	"Category": "IndicaLuna",
